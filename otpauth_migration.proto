@@ -1,8 +1,5 @@
 syntax = "proto3";
 
-option java_package = "com.beemdevelopment.aegis";
-option java_outer_classname = "GoogleAuthProtos";
-
 message MigrationPayload {
   enum Algorithm {
     ALGORITHM_UNSPECIFIED = 0;
