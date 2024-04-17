@@ -1,12 +1,41 @@
-import sys
+import argparse
 import base64
+import os
 from urllib.parse import urlparse, parse_qs
-import otpauth_migration_pb2  # Import the generated protobuf module
 
-def decode_migration_url(input_file, output_file):
-    # Read the migration URL from the input file
-    with open(input_file, 'r') as file:
-        migration_url = file.read().strip()
+import otpauth_migration_pb2  # Import the generated protobuf module
+from PIL import Image
+from pyzbar.pyzbar import decode
+
+
+def decode_batch_qr(directory, output):
+    for filename in os.listdir(directory):
+        file_path = os.path.join(directory, filename)
+        if os.path.isfile(file_path):
+            try:
+                decode_qr_to_file(file_path, output)
+            except Exception as exception:
+                print(f"Error with file: {file_path}")
+                print(f"Exception: {exception}")
+
+
+def decode_qr_to_file(image_path, output_file):
+    # Load the image
+    image = Image.open(image_path)
+
+    # Decode the QR code
+    decoded_objects = decode(image)
+    if not decoded_objects:
+        raise ValueError("No QR Code found in the image.")
+
+    # Extract data from the first QR code
+    qr_data = decoded_objects[0].data.decode('utf-8')
+
+    decode_migration_url(qr_data, output_file)
+
+
+def decode_migration_url(migration_url_data, output_file):
+    migration_url = migration_url_data
 
     # Parse the URL and extract the base64 encoded data
     parsed_url = urlparse(migration_url)
@@ -19,7 +48,7 @@ def decode_migration_url(input_file, output_file):
     migration_payload.ParseFromString(data)
 
     # Process each parameter into the specified format and write to a file
-    with open(output_file, 'w') as file:
+    with open(output_file, 'a') as file:
         for param in migration_payload.otp_parameters:
             secret = base64.b32encode(param.secret).decode('utf-8')
             name = param.name if param.name else ''
@@ -40,15 +69,20 @@ def decode_migration_url(input_file, output_file):
 
         additional_data = f"{version};{batch_size};{batch_index};{batch_id}"
         file.write(additional_data)
+        file.write("\n\n")
+
 
 def main():
-    if len(sys.argv) < 3:
-        print("Usage: python decode_script.py <input_file_with_url> <output_file_for_formatted_data>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Decode a QR code from an image and output the data to a text file.")
+    parser.add_argument("directory", type=str, help="Path to the directory that contains all the QR codes.")
+    parser.add_argument("output", type=str, help="Path to the output file that will contain all the decoded data.")
+    args = parser.parse_args()
 
-    input_file = sys.argv[1]
-    output_file = sys.argv[2]
-    decode_migration_url(input_file, output_file)
+    try:
+        decode_batch_qr(args.directory, args.output)
+    except Exception as e:
+        print(f"Exception occurred: {e}")
+
 
 if __name__ == "__main__":
     main()

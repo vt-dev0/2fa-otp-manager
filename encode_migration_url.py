@@ -1,14 +1,16 @@
-import sys
 import base64
-from urllib.parse import quote_plus, quote
+import sys
+from urllib.parse import quote
+
 import otpauth_migration_pb2  # Import the generated protobuf module
+
 
 def encode_migration_url(input_file, output_file):
     migration_payload = otpauth_migration_pb2.MigrationPayload()
 
     with open(input_file, 'r') as file:
         lines = file.readlines()
-    
+
     # Process all lines except the last one for otp_parameters
     for line in lines[:-1]:
         secret, name, issuer, algorithm, digits, type_, counter = line.strip().split(';')
@@ -39,6 +41,7 @@ def encode_migration_url(input_file, output_file):
     with open(output_file, 'w') as file:
         file.write(migration_url)
 
+
 def main():
     if len(sys.argv) < 3:
         print("Usage: python encode_script.py <input_file_with_formatted_data> <output_file_for_migration_url>")
@@ -47,6 +50,7 @@ def main():
     input_file = sys.argv[1]
     output_file = sys.argv[2]
     encode_migration_url(input_file, output_file)
+
 
 if __name__ == "__main__":
     main()
